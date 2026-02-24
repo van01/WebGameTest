@@ -1,146 +1,27 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>뱀파이어 서바이벌 - 상자 & 등급업 패치</title>
-    <style>
-        body { margin: 0; background: #000; overflow: hidden; color: white; font-family: 'Pretendard', sans-serif; user-select: none; display: flex; justify-content: center; align-items: center; height: 100vh; touch-action: none; }
-        #game-container { position: relative; width: 100vw; height: 56.25vw; max-height: 100vh; max-width: 177.78vh; background: #1a1a1a; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
-        canvas { width: 100%; height: 100%; display: block; touch-action: none; }
-        
-        #ui { position: absolute; top: 20px; left: 20px; width: calc(100% - 40px); pointer-events: none; z-index: 10; display: flex; justify-content: space-between; }
-        .bar-container { width: 100%; height: 20px; border: 2px solid #444; background: #222; margin-bottom: 5px; border-radius: 10px; overflow: hidden; }
-        #xp-bar { width: 0%; height: 100%; background: #ffeb3b; transition: width 0.2s; }
-        #hp-bar { width: 100%; height: 100%; background: #ff5252; transition: width 0.1s; }
-        .stats { font-size: 24px; font-weight: bold; text-shadow: 2px 2px 4px #000; }
-        #timer { font-size: 36px; font-weight: bold; text-align: center; width: 100%; position: absolute; top: 10px; text-shadow: 2px 2px 4px #000; z-index: 5; pointer-events: none; }
-        
-        #title-modal, #level-up-modal, #game-over-modal {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95); border: 3px solid #ffeb3b; padding: 40px;
-            display: none; flex-direction: column; gap: 15px; text-align: center; border-radius: 15px; z-index: 20; width: 600px;
-        }
-        #title-modal { display: flex; border-color: #8bc6ff; background: rgba(7, 10, 18, 0.97); }
-        .title-main { font-size: 58px; margin: 0; letter-spacing: 1px; color: #d4e8ff; text-shadow: 0 0 20px rgba(139, 198, 255, 0.35); }
-        .title-sub { margin: 0; font-size: 18px; color: #9cb0c7; }
-        .guide-box { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 10px; padding: 14px; text-align: left; line-height: 1.5; color: #dbe7f5; font-size: 16px; }
-        .modal-actions { display: flex; justify-content: center; gap: 12px; margin-top: 6px; }
-        .ui-btn {
-            border: 2px solid #8bc6ff;
-            background: linear-gradient(180deg, #284b73 0%, #1d3552 100%);
-            color: white;
-            font-size: 18px;
-            font-weight: bold;
-            padding: 12px 18px;
-            border-radius: 8px;
-            cursor: pointer;
-            min-width: 140px;
-        }
-        .ui-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
-        .ui-btn.secondary { border-color: #ffd27a; background: linear-gradient(180deg, #6b4a1d 0%, #4b3416 100%); }
-        .result-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 18px; color: #d8e2ed; }
-        .result-stats strong { color: #fff; }
-        h2 { margin: 0 0 10px 0; font-size: 36px; }
-        .skill-btn {
-            background: #222; color: white; border: 2px solid #555; padding: 20px;
-            cursor: pointer; font-size: 20px; border-radius: 8px; transition: 0.2s; font-weight: bold; display: flex; flex-direction: column; align-items: center; gap: 5px;
-        }
-        .skill-btn:hover { background: #444; border-color: #ffeb3b; transform: scale(1.02); }
-        .skill-desc { font-size: 14px; color: #aaa; font-weight: normal; }
-        #mobile-controls {
-            position: absolute;
-            left: 20px;
-            bottom: 20px;
-            z-index: 30;
-            display: none;
-            pointer-events: auto;
-        }
-        #joystick-base {
-            width: 140px;
-            height: 140px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.12);
-            border: 2px solid rgba(255, 255, 255, 0.35);
-            position: relative;
-            touch-action: none;
-        }
-        #joystick-stick {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.75);
-            border: 2px solid rgba(0, 0, 0, 0.35);
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            will-change: transform;
-        }
-        @media (hover: none), (pointer: coarse) {
-            #mobile-controls { display: block; }
-        }
-    </style>
-</head>
-<body>
-    <div id="game-container" role="application" aria-label="뱀파이어 서바이벌 게임 화면" tabindex="0">
-        <div id="timer" aria-live="off">00:00</div>
-        <div id="ui" aria-label="게임 상태 정보">
-            <div style="width: 30%;">
-                <div id="xp-progress" class="bar-container" role="progressbar" aria-label="경험치 바" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="xp-bar"></div></div>
-                <div id="hp-progress" class="bar-container" role="progressbar" aria-label="체력 바" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><div id="hp-bar"></div></div>
-                <div class="stats" aria-live="polite">LV. <span id="level">1</span> | KILLS: <span id="score">0</span></div>
-            </div>
-            <div class="stats" style="text-align: right; color:#aaa; font-size: 18px;">
-                보스 출현: 30초, 60초<br>웨이브: 20초, 45초, 75초
-            </div>
-        </div>
-
-        <div id="title-modal" role="dialog" aria-modal="true" aria-labelledby="title-main" tabindex="-1">
-            <h1 id="title-main" class="title-main">VAMSER</h1>
-            <p class="title-sub">밤의 군세에서 생존하고 최종 보스를 처치하세요</p>
-            <div class="guide-box">
-                이동: 마우스 추적 / WASD / 방향키 / 모바일 조이스틱<br>
-                성장: 보석 획득 후 레벨업 선택 (1, 2, 3 키 가능)<br>
-                목표: 60초 이후 등장하는 최종 보스 처치
-            </div>
-            <div class="modal-actions">
-                <button id="start-btn" class="ui-btn" type="button">게임 시작</button>
-            </div>
-        </div>
-
-        <div id="level-up-modal" role="dialog" aria-modal="true" aria-labelledby="level-up-title" tabindex="-1">
-            <h2 id="level-up-title">레벨 업!</h2>
-            <div id="skills-container" style="display: flex; flex-direction: column; gap: 10px;"></div>
-        </div>
-
-        <div id="game-over-modal" role="dialog" aria-modal="true" aria-labelledby="end-title" tabindex="-1">
-            <h1 id="end-title" style="font-size: 60px; margin: 0; color: #ff5252;">GAME OVER</h1>
-            <p id="end-subtitle" style="font-size: 24px; margin: 0; color: #c5d4e5;">이번 원정 결과</p>
-            <div class="result-stats">
-                <div>생존 시간: <strong id="result-time">00:00</strong></div>
-                <div>처치 수: <strong id="result-kills">0</strong></div>
-                <div>최종 레벨: <strong id="result-level">1</strong></div>
-                <div>획득 무기 수: <strong id="result-weapons">1</strong></div>
-            </div>
-            <div class="modal-actions">
-                <button id="restart-btn" class="ui-btn" type="button">다시 시작</button>
-                <button id="back-title-btn" class="ui-btn secondary" type="button">타이틀로</button>
-            </div>
-        </div>
-
-        <canvas id="gameCanvas" aria-label="게임 플레이 영역"></canvas>
-        <div id="mobile-controls" aria-hidden="true">
-            <div id="joystick-base">
-                <div id="joystick-stick"></div>
-            </div>
-        </div>
-    </div>
-
-<script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = 1920; canvas.height = 1080;
+const GAME_VERSION = 'v1.1.0';
+const versionBadgeEl = document.getElementById('version-badge');
+if (versionBadgeEl) versionBadgeEl.textContent = GAME_VERSION;
+
+function isMobileViewport() {
+    return window.matchMedia('(hover: none), (pointer: coarse)').matches || window.innerWidth <= 900;
+}
+
+function resizeCanvasForDevice() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const targetScale = isMobileViewport() ? 0.72 : 1;
+    const width = Math.max(960, Math.floor(rect.width * dpr * targetScale));
+    const height = Math.max(540, Math.floor(rect.height * dpr * targetScale));
+    if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+    }
+}
+
+resizeCanvasForDevice();
+window.addEventListener('resize', resizeCanvasForDevice);
 
 const xpBar = document.getElementById('xp-bar');
 const hpBar = document.getElementById('hp-bar');
@@ -395,6 +276,7 @@ function showResult(win) {
 
 function startGameSession() {
     resetGameState();
+    resizeCanvasForDevice();
     gameStarted = true;
     isPaused = false;
     titleModal.style.display = 'none';
@@ -457,6 +339,7 @@ function releaseBullet(index) {
 }
 
 function resetJoystickStick() {
+    joystick.maxRadius = Math.max(36, joystickBase.clientWidth * 0.37);
     joystickStick.style.transform = 'translate(-50%, -50%)';
 }
 
@@ -1546,6 +1429,3 @@ function draw() {
 
 openTitle();
 requestAnimationFrame(updateGame);
-</script>
-</body>
-</html>
