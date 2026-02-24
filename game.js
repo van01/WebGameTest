@@ -91,6 +91,7 @@ const stageSelectEl = document.getElementById('stage-select');
 const metaPanelEl = document.getElementById('meta-panel');
 const secretInputEl = document.getElementById('secret-input');
 const secretSubmitBtn = document.getElementById('secret-submit');
+const mobileControlsEl = document.getElementById('mobile-controls');
 const joystickBase = document.getElementById('joystick-base');
 const joystickStick = document.getElementById('joystick-stick');
 
@@ -633,6 +634,7 @@ function applyEvolution(evoId) {
 
 function triggerArcanaUI() {
     isPaused = true;
+    if (mobileControlsEl) mobileControlsEl.style.pointerEvents = 'none';
     pendingArcanaChoices = (ARCANA_DB.filter(a => metaState.unlockedArcanas.includes(a.id) && !selectedArcanas.includes(a.id)))
         .sort(() => 0.5 - Math.random())
         .slice(0, 3);
@@ -646,6 +648,7 @@ function triggerArcanaUI() {
             selectedArcanas.push(arc.id);
             levelModal.style.display = 'none';
             isPaused = false;
+            if (mobileControlsEl) mobileControlsEl.style.pointerEvents = 'auto';
             pendingArcanaChoices = null;
             lastFrameTime = performance.now();
         });
@@ -663,6 +666,7 @@ function triggerEvolutionUI() {
     pendingEvolutionChoices = getEligibleEvolutionChoices();
     if (pendingEvolutionChoices.length === 0) return false;
     isPaused = true;
+    if (mobileControlsEl) mobileControlsEl.style.pointerEvents = 'none';
     skillsContainer.innerHTML = '';
     pendingEvolutionChoices.slice(0, 3).forEach((evo, idx) => {
         const btn = document.createElement('button');
@@ -674,6 +678,7 @@ function triggerEvolutionUI() {
             pendingEvolutionChoices = null;
             levelModal.style.display = 'none';
             isPaused = false;
+            if (mobileControlsEl) mobileControlsEl.style.pointerEvents = 'auto';
             lastFrameTime = performance.now();
         });
         skillsContainer.appendChild(btn);
@@ -732,6 +737,7 @@ function openTitle() {
     levelModal.style.display = 'none';
     gameOverModal.style.display = 'none';
     titleModal.style.display = 'flex';
+    if (mobileControlsEl) mobileControlsEl.style.pointerEvents = 'none';
     refreshTitleSelectors();
     renderMetaPanel();
     titleModal.focus();
@@ -741,6 +747,7 @@ function showResult(win) {
     gameOver = true;
     isPaused = true;
     levelModal.style.display = 'none';
+    if (mobileControlsEl) mobileControlsEl.style.pointerEvents = 'none';
     endTitleEl.innerText = win ? 'STAGE CLEAR!' : 'GAME OVER';
     endTitleEl.style.color = win ? '#ffeb3b' : '#ff5252';
     endSubtitleEl.innerText = win
@@ -772,6 +779,7 @@ function startGameSession() {
     isPaused = false;
     titleModal.style.display = 'none';
     gameOverModal.style.display = 'none';
+    if (mobileControlsEl) mobileControlsEl.style.pointerEvents = 'auto';
     document.getElementById('game-container').focus();
     lastFrameTime = performance.now();
     setTimeout(spawnEnemy, 500);
@@ -963,12 +971,14 @@ window.addEventListener('keydown', e => {
             pendingArcanaChoices = null;
             levelModal.style.display = 'none';
             isPaused = false;
+            if (mobileControlsEl) mobileControlsEl.style.pointerEvents = 'auto';
             lastFrameTime = performance.now();
         } else if (pendingEvolutionChoices && pendingEvolutionChoices[idx]) {
             applyEvolution(pendingEvolutionChoices[idx].id);
             pendingEvolutionChoices = null;
             levelModal.style.display = 'none';
             isPaused = false;
+            if (mobileControlsEl) mobileControlsEl.style.pointerEvents = 'auto';
             lastFrameTime = performance.now();
         } else if (levelChoices[idx]) {
             applySkill(levelChoices[idx].id);
@@ -1103,6 +1113,7 @@ function gainXp(amount) {
 
 function triggerLevelUpUI() {
     isPaused = true;
+    if (mobileControlsEl) mobileControlsEl.style.pointerEvents = 'none';
     levelUpQueue--;
     levelEl.innerText = player.level;
     if (player.level > 1 && player.level % 5 === 0) {
@@ -1118,6 +1129,7 @@ function triggerLevelUpUI() {
     if (available.length === 0) {
         applyLimitBreakBonus();
         isPaused = false;
+        if (mobileControlsEl) mobileControlsEl.style.pointerEvents = 'auto';
         lastFrameTime = performance.now();
         return;
     }
@@ -1166,6 +1178,7 @@ function applySkill(id) {
     
     levelModal.style.display = 'none';
     isPaused = false;
+    if (mobileControlsEl) mobileControlsEl.style.pointerEvents = 'auto';
     levelChoices = [];
     lastFrameTime = performance.now(); 
 }

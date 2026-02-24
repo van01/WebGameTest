@@ -43,7 +43,7 @@
         #title-modal, #level-up-modal, #game-over-modal {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(0,0,0,0.95); border: 3px solid #ffeb3b; padding: 40px;
-            display: none; flex-direction: column; gap: 15px; text-align: center; border-radius: 15px; z-index: 20; width: min(600px, calc(100vw - 24px));
+            display: none; flex-direction: column; gap: 15px; text-align: center; border-radius: 15px; z-index: 80; width: min(600px, calc(100vw - 24px));
         }
         #title-modal { display: flex; border-color: #8bc6ff; background: rgba(7, 10, 18, 0.97); }
         .title-main { font-size: 58px; margin: 0; letter-spacing: 1px; color: #d4e8ff; text-shadow: 0 0 20px rgba(139, 198, 255, 0.35); }
