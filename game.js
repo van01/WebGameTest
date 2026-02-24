@@ -2,7 +2,45 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const GAME_VERSION = 'v1.1.0';
 const versionBadgeEl = document.getElementById('version-badge');
+const fullscreenToggleBtn = document.getElementById('fullscreen-toggle');
 if (versionBadgeEl) versionBadgeEl.textContent = GAME_VERSION;
+
+function getFullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function updateFullscreenButtonLabel() {
+    if (!fullscreenToggleBtn) return;
+    const isFullscreen = !!getFullscreenElement();
+    fullscreenToggleBtn.textContent = isFullscreen ? '일반화면' : '전체화면';
+    fullscreenToggleBtn.setAttribute('aria-label', isFullscreen ? '일반화면 전환' : '전체화면 전환');
+}
+
+async function toggleFullscreenMode() {
+    const target = document.documentElement;
+    const isFullscreen = !!getFullscreenElement();
+    try {
+        if (!isFullscreen) {
+            if (target.requestFullscreen) await target.requestFullscreen();
+            else if (target.webkitRequestFullscreen) target.webkitRequestFullscreen();
+        } else {
+            if (document.exitFullscreen) await document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        }
+    } catch (_) {
+        // Ignore user gesture/capability failures and keep current label.
+    }
+    updateFullscreenButtonLabel();
+}
+
+if (fullscreenToggleBtn) {
+    fullscreenToggleBtn.addEventListener('click', toggleFullscreenMode);
+    const supported = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+    if (!supported) fullscreenToggleBtn.disabled = true;
+}
+document.addEventListener('fullscreenchange', updateFullscreenButtonLabel);
+document.addEventListener('webkitfullscreenchange', updateFullscreenButtonLabel);
+updateFullscreenButtonLabel();
 
 function isMobileViewport() {
     return window.matchMedia('(hover: none), (pointer: coarse)').matches || window.innerWidth <= 900;
