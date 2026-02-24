@@ -12,8 +12,9 @@ function resizeCanvasForDevice() {
     const rect = canvas.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const targetScale = isMobileViewport() ? 0.72 : 1;
-    const width = Math.max(960, Math.floor(rect.width * dpr * targetScale));
-    const height = Math.max(540, Math.floor(rect.height * dpr * targetScale));
+    // Keep the bitmap aspect ratio identical to the displayed canvas size.
+    const width = Math.max(1, Math.floor(rect.width * dpr * targetScale));
+    const height = Math.max(1, Math.floor(rect.height * dpr * targetScale));
     if (canvas.width !== width || canvas.height !== height) {
         canvas.width = width;
         canvas.height = height;
@@ -22,6 +23,9 @@ function resizeCanvasForDevice() {
 
 resizeCanvasForDevice();
 window.addEventListener('resize', resizeCanvasForDevice);
+window.addEventListener('orientationchange', () => {
+    requestAnimationFrame(resizeCanvasForDevice);
+});
 
 const xpBar = document.getElementById('xp-bar');
 const hpBar = document.getElementById('hp-bar');
