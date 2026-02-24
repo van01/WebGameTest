@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>뱀파이어 서바이벌 - 상자 & 등급업 패치</title>
+    <title>VamSer - Vampire Survivors HTML Lite</title>
         <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
     <div id="game-container" role="application" aria-label="뱀파이어 서바이벌 게임 화면" tabindex="0">
         <div id="timer" aria-live="off">00:00</div>
-        <div id="version-badge" aria-label="게임 버전">v1.1.0</div>
+        <div id="version-badge" aria-label="게임 버전">v1.3.0</div>
         <button id="fullscreen-toggle" type="button" aria-label="전체화면 전환">전체화면</button>
         <div id="ui" aria-label="게임 상태 정보">
             <div style="width: 30%;">
@@ -27,8 +27,26 @@
             <p class="title-sub">밤의 군세에서 생존하고 최종 보스를 처치하세요</p>
             <div class="guide-box">
                 이동: 마우스 추적 / WASD / 방향키 / 모바일 조이스틱<br>
-                성장: 보석 획득 후 레벨업 선택 (1, 2, 3 키 가능)<br>
-                목표: 60초 이후 등장하는 최종 보스 처치
+                성장: 보석 획득 후 레벨업/아르카나/진화 선택 (1, 2, 3 키 가능)<br>
+                목표: 모드별 생존, 보스 처치, 해금 및 컬렉션 완성
+            </div>
+            <div class="mode-row">
+                <label for="character-select">캐릭터</label>
+                <select id="character-select" aria-label="캐릭터 선택"></select>
+                <label for="stage-select">스테이지</label>
+                <select id="stage-select" aria-label="스테이지 선택"></select>
+                <label for="mode-select">모드</label>
+                <select id="mode-select" aria-label="게임 모드 선택">
+                    <option value="normal">Normal</option>
+                    <option value="hyper">Hyper</option>
+                    <option value="endless">Endless</option>
+                    <option value="adventure">Adventure</option>
+                </select>
+            </div>
+            <div id="meta-panel" class="meta-panel" aria-live="polite"></div>
+            <div class="secret-row">
+                <input id="secret-input" type="text" placeholder="비밀 코드 입력" maxlength="32" aria-label="비밀 코드">
+                <button id="secret-submit" class="ui-btn secondary" type="button">비밀 해제</button>
             </div>
             <div class="modal-actions">
                 <button id="start-btn" class="ui-btn" type="button">게임 시작</button>

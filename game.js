@@ -1,6 +1,6 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const GAME_VERSION = 'v1.1.0';
+const GAME_VERSION = 'v1.3.0';
 const versionBadgeEl = document.getElementById('version-badge');
 const fullscreenToggleBtn = document.getElementById('fullscreen-toggle');
 if (versionBadgeEl) versionBadgeEl.textContent = GAME_VERSION;
@@ -85,8 +85,92 @@ const resultTimeEl = document.getElementById('result-time');
 const resultKillsEl = document.getElementById('result-kills');
 const resultLevelEl = document.getElementById('result-level');
 const resultWeaponsEl = document.getElementById('result-weapons');
+const modeSelectEl = document.getElementById('mode-select');
+const characterSelectEl = document.getElementById('character-select');
+const stageSelectEl = document.getElementById('stage-select');
+const metaPanelEl = document.getElementById('meta-panel');
+const secretInputEl = document.getElementById('secret-input');
+const secretSubmitBtn = document.getElementById('secret-submit');
 const joystickBase = document.getElementById('joystick-base');
 const joystickStick = document.getElementById('joystick-stick');
+
+const GAME_MODES = {
+    normal: {
+        key: 'normal',
+        label: 'Normal',
+        enemyHpMul: 1,
+        enemySpeedMul: 1,
+        enemySpawnMul: 1,
+        xpMul: 1
+    },
+    hyper: {
+        key: 'hyper',
+        label: 'Hyper',
+        enemyHpMul: 1.3,
+        enemySpeedMul: 1.2,
+        enemySpawnMul: 1.25,
+        xpMul: 1.3
+    },
+    endless: {
+        key: 'endless',
+        label: 'Endless',
+        enemyHpMul: 1.15,
+        enemySpeedMul: 1.1,
+        enemySpawnMul: 1.18,
+        xpMul: 1.1
+    },
+    adventure: {
+        key: 'adventure',
+        label: 'Adventure',
+        enemyHpMul: 1.05,
+        enemySpeedMul: 1.08,
+        enemySpawnMul: 1.12,
+        xpMul: 1.05
+    }
+};
+
+const SAVE_KEY = 'vamser_meta_v1';
+
+const CHARACTER_DB = [
+    { id: 'hunter', name: '헌터 루카', desc: '기본형. 안정적인 시작.', baseHp: 100, speed: 5, startWeapon: 'wand', unlock: null },
+    { id: 'knight', name: '나이트 이리스', desc: '체력이 높고 채찍 시작.', baseHp: 125, speed: 4.7, startWeapon: 'whip', unlock: { type: 'kills', value: 120 } },
+    { id: 'rogue', name: '로그 베인', desc: '이속이 빠르고 단검 시작.', baseHp: 90, speed: 5.8, startWeapon: 'dagger', unlock: { type: 'kills', value: 300 } },
+    { id: 'cleric', name: '클레릭 세라', desc: '마늘 시작, 생존 특화.', baseHp: 110, speed: 4.9, startWeapon: 'garlic', unlock: { type: 'time', value: 120 } },
+    { id: 'storm', name: '스톰 볼트', desc: '번개 시작, 공격적 성장.', baseHp: 95, speed: 5.2, startWeapon: 'lightning', unlock: { type: 'kills', value: 650 } },
+    { id: 'frost', name: '프로스트 유나', desc: '서리 시작, 제어 특화.', baseHp: 105, speed: 5.1, startWeapon: 'frost', unlock: { type: 'time', value: 240 } }
+];
+
+const STAGE_DB = [
+    { id: 'courtyard', name: '성 안뜰', desc: '기본 스테이지', danger: 1 },
+    { id: 'library', name: '저주 도서관', desc: '직선 웨이브 강화', danger: 1.1 },
+    { id: 'catacomb', name: '지하 묘지', desc: '엘리트 출현 빈도 증가', danger: 1.2 }
+];
+
+const ARCANA_DB = [
+    { id: 'iron_will', name: 'I. 강철 의지', desc: '최대 체력 +25, 피해 8% 경감' },
+    { id: 'swift_blade', name: 'II. 질풍의 칼날', desc: '투사체 속도/개수 강화' },
+    { id: 'blood_harvest', name: 'III. 피의 수확', desc: '처치 시 추가 회복' },
+    { id: 'storm_oath', name: 'IV. 폭풍 서약', desc: '번개 계열 피해 증가' },
+    { id: 'frozen_crown', name: 'V. 한기의 왕관', desc: '감속 효과 강화' },
+    { id: 'greed_sigil', name: 'VI. 탐욕의 인장', desc: '골드 및 드롭률 증가' },
+    { id: 'echo_time', name: 'VII. 시간의 메아리', desc: '쿨다운 추가 감소' },
+    { id: 'magnet_star', name: 'VIII. 자성 항성', desc: '자석 범위/보석 흡인 강화' }
+];
+
+const EVOLUTION_DB = [
+    { id: 'holywand', base: 'wand', needPassive: 'cdr', name: '성역 지팡이', desc: '지팡이가 관통 성능과 피해를 얻음' },
+    { id: 'soulgarlic', base: 'garlic', needPassive: 'lifesteal', name: '혼령 마늘', desc: '아우라 범위와 흡혈량 강화' },
+    { id: 'deathspiral', base: 'axe', needPassive: 'speed', name: '죽음의 나선', desc: '도끼 다발이 크게 강화됨' },
+    { id: 'thunderloop', base: 'lightning', needPassive: 'luck', name: '천둥 고리', desc: '번개가 연쇄 낙뢰를 생성' },
+    { id: 'absolutezero', base: 'frost', needPassive: 'magnetplus', name: '절대영도', desc: '서리탄에 광역 동결 추가' }
+];
+
+const SECRET_CODES = {
+    NIGHTFALL: { type: 'unlock_character', id: 'storm', message: '스톰 볼트가 해금되었습니다.' },
+    RELICROOM: { type: 'unlock_arcana_all', message: '모든 아르카나가 해금되었습니다.' },
+    GOLDRUSH: { type: 'gold', amount: 500, message: '500 골드를 획득했습니다.' },
+    BONECAT: { type: 'unlock_stage', id: 'catacomb', message: '지하 묘지가 해금되었습니다.' }
+};
 
 let player = { x: 0, y: 0, size: 25, hp: 100, maxHp: 100, speed: 5, level: 1, xp: 0, nextXp: 5 };
 let camera = { x: 0, y: 0 };
@@ -102,6 +186,14 @@ let score = 0, isPaused = false, gameOver = false;
 let gameTime = 0, lastFrameTime = performance.now();
 let playerFacingAngle = 0;
 let gameStarted = false;
+let gameMode = GAME_MODES.normal;
+let selectedCharacterId = 'hunter';
+let selectedStageId = 'courtyard';
+let nextRandomEventAt = 30;
+let selectedArcanas = [];
+let pendingArcanaChoices = null;
+let pendingEvolutionChoices = null;
+let adventureClearTime = 180;
 let playerDamageAccumulator = 0;
 let playerLastDamageTextAt = 0;
 let playerLastHitFxAt = 0;
@@ -109,6 +201,9 @@ let playerLastHitFxAt = 0;
 let bossSpawned = { mid: false, final: false };
 let swarmsTriggered = [];
 let levelUpQueue = 0; 
+let runGold = 0;
+let totalRunKills = 0;
+let metaState = null;
 
 let weapons = {
     wand: { level: 1, damage: 15, cooldown: 600, count: 1, lastFire: 0 },
@@ -140,6 +235,170 @@ const skillDB = [
     { id: 'heal', name: '🍗 고기 (소모품)', desc: '즉시 체력을 50% 회복합니다', maxLevel: 99 }
 ];
 
+function getDefaultMetaState() {
+    return {
+        gold: 0,
+        totalKills: 0,
+        bestTime: 0,
+        unlockedCharacters: ['hunter'],
+        unlockedStages: ['courtyard', 'library'],
+        unlockedArcanas: ['iron_will', 'swift_blade', 'blood_harvest'],
+        collection: { weapons: {}, passives: {}, evolutions: {}, enemies: {} },
+        bestiary: {},
+        secretsUsed: []
+    };
+}
+
+function loadMetaState() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        const base = getDefaultMetaState();
+        if (!raw) return base;
+        const parsed = JSON.parse(raw);
+        return {
+            ...base,
+            ...parsed,
+            collection: { ...base.collection, ...(parsed.collection || {}) },
+            bestiary: { ...(parsed.bestiary || {}) }
+        };
+    } catch (_) {
+        return getDefaultMetaState();
+    }
+}
+
+function saveMetaState() {
+    try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(metaState));
+    } catch (_) {
+        // Ignore persistence failures.
+    }
+}
+
+function isCharacterUnlocked(id) {
+    return metaState.unlockedCharacters.includes(id);
+}
+
+function isStageUnlocked(id) {
+    return metaState.unlockedStages.includes(id);
+}
+
+function unlockCharacter(id) {
+    if (!metaState.unlockedCharacters.includes(id)) metaState.unlockedCharacters.push(id);
+}
+
+function unlockStage(id) {
+    if (!metaState.unlockedStages.includes(id)) metaState.unlockedStages.push(id);
+}
+
+function unlockArcana(id) {
+    if (!metaState.unlockedArcanas.includes(id)) metaState.unlockedArcanas.push(id);
+}
+
+function markCollection(type, id) {
+    if (!metaState.collection[type]) metaState.collection[type] = {};
+    metaState.collection[type][id] = true;
+}
+
+function renderMetaPanel(message = '') {
+    if (!metaPanelEl) return;
+    const unlockedChars = metaState.unlockedCharacters.length;
+    const unlockedArcanas = metaState.unlockedArcanas.length;
+    const unlockedStages = metaState.unlockedStages.length;
+    const weaponCount = Object.keys(metaState.collection.weapons || {}).length;
+    const evoCount = Object.keys(metaState.collection.evolutions || {}).length;
+    const enemyCount = Object.keys(metaState.collection.enemies || {}).length;
+    const topBestiary = Object.entries(metaState.bestiary || {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(', ') || '-';
+
+    metaPanelEl.innerHTML =
+        `골드: <strong>${Math.floor(metaState.gold)}</strong> | 총 처치: <strong>${Math.floor(metaState.totalKills)}</strong> | 최고 생존: <strong>${formatTime(metaState.bestTime)}</strong><br>` +
+        `해금 - 캐릭터 ${unlockedChars}/${CHARACTER_DB.length}, 스테이지 ${unlockedStages}/${STAGE_DB.length}, 아르카나 ${unlockedArcanas}/${ARCANA_DB.length}<br>` +
+        `컬렉션 - 무기 ${weaponCount}, 진화 ${evoCount}, 우화집(적) ${enemyCount}<br>` +
+        `우화집 상위: ${topBestiary}` +
+        (message ? `<br><span style="color:#ffe39a">${message}</span>` : '');
+}
+
+function refreshTitleSelectors() {
+    if (characterSelectEl) {
+        characterSelectEl.innerHTML = '';
+        CHARACTER_DB.forEach(ch => {
+            const option = document.createElement('option');
+            const unlocked = isCharacterUnlocked(ch.id);
+            option.value = ch.id;
+            option.disabled = !unlocked;
+            option.textContent = unlocked ? ch.name : `${ch.name} (잠김)`;
+            characterSelectEl.appendChild(option);
+        });
+        if (!isCharacterUnlocked(selectedCharacterId)) selectedCharacterId = 'hunter';
+        characterSelectEl.value = selectedCharacterId;
+    }
+    if (stageSelectEl) {
+        stageSelectEl.innerHTML = '';
+        STAGE_DB.forEach(st => {
+            const option = document.createElement('option');
+            const unlocked = isStageUnlocked(st.id);
+            option.value = st.id;
+            option.disabled = !unlocked;
+            option.textContent = unlocked ? st.name : `${st.name} (잠김)`;
+            stageSelectEl.appendChild(option);
+        });
+        if (!isStageUnlocked(selectedStageId)) selectedStageId = 'courtyard';
+        stageSelectEl.value = selectedStageId;
+    }
+}
+
+function tryUnlockProgression() {
+    CHARACTER_DB.forEach(ch => {
+        if (!ch.unlock || isCharacterUnlocked(ch.id)) return;
+        if (ch.unlock.type === 'kills' && metaState.totalKills >= ch.unlock.value) unlockCharacter(ch.id);
+        if (ch.unlock.type === 'time' && metaState.bestTime >= ch.unlock.value) unlockCharacter(ch.id);
+    });
+    if (metaState.totalKills >= 450) unlockStage('catacomb');
+    if (metaState.totalKills >= 80) unlockArcana('storm_oath');
+    if (metaState.totalKills >= 150) unlockArcana('frozen_crown');
+    if (metaState.totalKills >= 260) unlockArcana('greed_sigil');
+    if (metaState.totalKills >= 380) unlockArcana('echo_time');
+    if (metaState.bestTime >= 180) unlockArcana('magnet_star');
+}
+
+function applySecretCode(rawCode) {
+    const code = String(rawCode || '').trim().toUpperCase();
+    if (!code) return;
+    const rule = SECRET_CODES[code];
+    if (!rule) {
+        renderMetaPanel('알 수 없는 비밀 코드입니다.');
+        return;
+    }
+    if (metaState.secretsUsed.includes(code)) {
+        renderMetaPanel('이미 사용한 비밀 코드입니다.');
+        return;
+    }
+    metaState.secretsUsed.push(code);
+    if (rule.type === 'unlock_character') unlockCharacter(rule.id);
+    if (rule.type === 'unlock_stage') unlockStage(rule.id);
+    if (rule.type === 'unlock_arcana_all') ARCANA_DB.forEach(a => unlockArcana(a.id));
+    if (rule.type === 'gold') metaState.gold += rule.amount || 0;
+    tryUnlockProgression();
+    saveMetaState();
+    refreshTitleSelectors();
+    renderMetaPanel(rule.message || '비밀이 해금되었습니다.');
+}
+
+function getCharacterById(id) {
+    return CHARACTER_DB.find(ch => ch.id === id) || CHARACTER_DB[0];
+}
+
+function getStageById(id) {
+    return STAGE_DB.find(st => st.id === id) || STAGE_DB[0];
+}
+
+metaState = loadMetaState();
+tryUnlockProgression();
+saveMetaState();
+
 function formatTime(totalSeconds) {
     const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
     const secs = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
@@ -159,7 +418,10 @@ function resetSkillLevels() {
 }
 
 function resetGameState() {
-    player = { x: 0, y: 0, size: 25, hp: 100, maxHp: 100, speed: 5, level: 1, xp: 0, nextXp: 5 };
+    const character = getCharacterById(selectedCharacterId);
+    const stage = getStageById(selectedStageId);
+    const stageDanger = stage.danger || 1;
+    player = { x: 0, y: 0, size: 25, hp: character.baseHp, maxHp: character.baseHp, speed: character.speed, level: 1, xp: 0, nextXp: 5 };
     camera = { x: 0, y: 0 };
     inputTarget = { screenX: canvas.width / 2, screenY: canvas.height / 2, active: true, touchActive: false, pointerId: null };
     keys = { up: false, down: false, left: false, right: false };
@@ -177,10 +439,17 @@ function resetGameState() {
     damageTexts = [];
     pools = { enemies: [], bullets: [] };
     score = 0;
+    totalRunKills = 0;
+    runGold = 0;
     isPaused = false;
     gameOver = false;
     gameTime = 0;
     playerFacingAngle = 0;
+    selectedArcanas = [];
+    pendingArcanaChoices = null;
+    pendingEvolutionChoices = null;
+    nextRandomEventAt = 28;
+    adventureClearTime = 180;
     playerDamageAccumulator = 0;
     playerLastDamageTextAt = 0;
     playerLastHitFxAt = 0;
@@ -188,16 +457,26 @@ function resetGameState() {
     swarmsTriggered = [];
     levelUpQueue = 0;
     weapons = {
-        wand: { level: 1, damage: 15, cooldown: 600, count: 1, lastFire: 0 },
+        wand: { level: 0, damage: 15, cooldown: 600, count: 1, lastFire: 0, evolved: false },
         garlic: { level: 0, damage: 5, radius: 120, cooldown: 500, lastFire: 0 },
         orbit: { level: 0, damage: 10, count: 0, speed: 0.05, radius: 150, angle: 0 },
-        whip: { level: 0, damage: 28, cooldown: 900, range: 220, arc: 1.35, lastFire: 0 },
+        whip: { level: 0, damage: 28, cooldown: 900, range: 220, arc: 1.35, lastFire: 0, evolved: false },
         dagger: { level: 0, damage: 10, cooldown: 180, speed: 21, count: 1, lastFire: 0 },
-        axe: { level: 0, damage: 22, cooldown: 1100, count: 1, lastFire: 0 },
-        lightning: { level: 0, damage: 34, cooldown: 1800, count: 1, lastFire: 0 },
+        axe: { level: 0, damage: 22, cooldown: 1100, count: 1, lastFire: 0, evolved: false },
+        lightning: { level: 0, damage: 34, cooldown: 1800, count: 1, lastFire: 0, evolved: false },
         holywater: { level: 0, damage: 8, cooldown: 1500, count: 1, radius: 95, duration: 2.4, lastFire: 0 },
-        frost: { level: 0, damage: 12, cooldown: 720, count: 1, slow: 0.26, slowDuration: 1.3, lastFire: 0 }
+        frost: { level: 0, damage: 12, cooldown: 720, count: 1, slow: 0.26, slowDuration: 1.3, lastFire: 0, evolved: false }
     };
+    if (weapons[character.startWeapon]) {
+        weapons[character.startWeapon].level = 1;
+        markCollection('weapons', character.startWeapon);
+    } else {
+        weapons.wand.level = 1;
+        markCollection('weapons', 'wand');
+    }
+    Object.values(weapons).forEach(w => {
+        if (w.damage) w.damage *= stageDanger;
+    });
     resetSkillLevels();
     scoreEl.innerText = '0';
     levelEl.innerText = '1';
@@ -271,7 +550,7 @@ function getSkillLevel(id) {
 }
 
 function getCooldownScale() {
-    return Math.max(0.45, 1 - getSkillLevel('cdr') * 0.08);
+    return Math.max(0.35, 1 - getSkillLevel('cdr') * 0.08 - getArcanaCooldownBonus());
 }
 
 function getLuckFactor() {
@@ -279,13 +558,168 @@ function getLuckFactor() {
 }
 
 function getMagnetRadiusBonus() {
-    return getSkillLevel('magnetplus') * 40;
+    return getSkillLevel('magnetplus') * 40 + getMagnetArcanaBonus();
+}
+
+function hasArcana(id) {
+    return selectedArcanas.includes(id);
+}
+
+function getDamageReduction() {
+    return hasArcana('iron_will') ? 0.08 : 0;
+}
+
+function getGoldFactor() {
+    return hasArcana('greed_sigil') ? 1.35 : 1;
+}
+
+function getProjectileBonus() {
+    return hasArcana('swift_blade') ? 1 : 0;
+}
+
+function getArcanaCooldownBonus() {
+    return hasArcana('echo_time') ? 0.08 : 0;
+}
+
+function getFrostBonus() {
+    return hasArcana('frozen_crown') ? 0.15 : 0;
+}
+
+function getLifestealBonus() {
+    return hasArcana('blood_harvest') ? 1.3 : 1;
+}
+
+function getMagnetArcanaBonus() {
+    return hasArcana('magnet_star') ? 90 : 0;
+}
+
+function getEligibleEvolutionChoices() {
+    return EVOLUTION_DB.filter(evo => {
+        const baseWeapon = weapons[evo.base];
+        if (!baseWeapon || baseWeapon.level < 5 || baseWeapon.evolved) return false;
+        const passiveLv = getSkillLevel(evo.needPassive);
+        return passiveLv >= 3;
+    });
+}
+
+function applyEvolution(evoId) {
+    const evo = EVOLUTION_DB.find(x => x.id === evoId);
+    if (!evo) return;
+    const w = weapons[evo.base];
+    if (!w || w.evolved) return;
+    w.evolved = true;
+    if (evo.id === 'holywand') {
+        w.damage += 16;
+        w.count += 2;
+        w.cooldown = Math.max(220, w.cooldown - 150);
+    } else if (evo.id === 'soulgarlic') {
+        weapons.garlic.damage += 8;
+        weapons.garlic.radius += 55;
+    } else if (evo.id === 'deathspiral') {
+        weapons.axe.damage += 14;
+        weapons.axe.count += 2;
+    } else if (evo.id === 'thunderloop') {
+        weapons.lightning.damage += 20;
+        weapons.lightning.count += 1;
+        weapons.lightning.cooldown = Math.max(1100, weapons.lightning.cooldown - 250);
+    } else if (evo.id === 'absolutezero') {
+        weapons.frost.damage += 12;
+        weapons.frost.slow = Math.min(0.8, weapons.frost.slow + 0.2);
+        weapons.frost.count += 1;
+    }
+    markCollection('evolutions', evo.id);
+    spawnDamageText(player.x, player.y - 40, evo.name, '#9fffd0');
+}
+
+function triggerArcanaUI() {
+    isPaused = true;
+    pendingArcanaChoices = (ARCANA_DB.filter(a => metaState.unlockedArcanas.includes(a.id) && !selectedArcanas.includes(a.id)))
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 3);
+    skillsContainer.innerHTML = '';
+    pendingArcanaChoices.forEach((arc, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'skill-btn';
+        btn.type = 'button';
+        btn.innerHTML = `<span>${idx + 1}. ${arc.name}</span><span class="skill-desc">${arc.desc}</span>`;
+        btn.addEventListener('click', () => {
+            selectedArcanas.push(arc.id);
+            levelModal.style.display = 'none';
+            isPaused = false;
+            pendingArcanaChoices = null;
+            lastFrameTime = performance.now();
+        });
+        skillsContainer.appendChild(btn);
+    });
+    if (pendingArcanaChoices.length === 0) {
+        isPaused = false;
+        return;
+    }
+    document.getElementById('level-up-title').innerText = '아르카나 선택!';
+    levelModal.style.display = 'flex';
+}
+
+function triggerEvolutionUI() {
+    pendingEvolutionChoices = getEligibleEvolutionChoices();
+    if (pendingEvolutionChoices.length === 0) return false;
+    isPaused = true;
+    skillsContainer.innerHTML = '';
+    pendingEvolutionChoices.slice(0, 3).forEach((evo, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'skill-btn';
+        btn.type = 'button';
+        btn.innerHTML = `<span>${idx + 1}. ${evo.name}</span><span class="skill-desc">${evo.desc}</span>`;
+        btn.addEventListener('click', () => {
+            applyEvolution(evo.id);
+            pendingEvolutionChoices = null;
+            levelModal.style.display = 'none';
+            isPaused = false;
+            lastFrameTime = performance.now();
+        });
+        skillsContainer.appendChild(btn);
+    });
+    document.getElementById('level-up-title').innerText = '진화 무기 선택!';
+    levelModal.style.display = 'flex';
+    return true;
+}
+
+function applyRandomEvent() {
+    const roll = Math.random();
+    if (roll < 0.25) {
+        spawnSwarm();
+        spawnDamageText(player.x, player.y - 50, '웨이브!', '#ffcf77');
+    } else if (roll < 0.5) {
+        player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.25);
+        updateHpBar();
+        spawnDamageText(player.x, player.y - 50, '+치유', '#9effa8');
+    } else if (roll < 0.75) {
+        for (let i = 0; i < 12; i++) {
+            const a = (Math.PI * 2 / 12) * i;
+            gems.push({ x: player.x + Math.cos(a) * 120, y: player.y + Math.sin(a) * 120, color: '#e4d36f', value: 3, size: 7, isMagnetic: true });
+        }
+        spawnDamageText(player.x, player.y - 50, '보물비', '#ffe9a6');
+    } else {
+        enemies.forEach(en => {
+            if (!en.isBoss) applyDamageToEnemy(en, 18, '#ffd4d4', performance.now());
+        });
+        spawnDamageText(player.x, player.y - 50, '심판', '#ffaaaa');
+    }
+}
+
+function applyLimitBreakBonus() {
+    const keys = Object.keys(weapons).filter(k => weapons[k].level > 0);
+    if (keys.length === 0) return;
+    const key = keys[Math.floor(Math.random() * keys.length)];
+    const w = weapons[key];
+    if (w.damage) w.damage += 2;
+    if (w.count !== undefined && Math.random() < 0.22) w.count += 1;
+    if (w.cooldown) w.cooldown = Math.max(120, w.cooldown - 8);
 }
 
 function applyLifestealOnKill() {
     const lv = getSkillLevel('lifesteal');
     if (lv <= 0) return;
-    const heal = Math.min(2 + lv * 0.6, player.maxHp - player.hp);
+    const heal = Math.min((2 + lv * 0.6) * getLifestealBonus(), player.maxHp - player.hp);
     if (heal <= 0) return;
     player.hp += heal;
     updateHpBar();
@@ -298,6 +732,8 @@ function openTitle() {
     levelModal.style.display = 'none';
     gameOverModal.style.display = 'none';
     titleModal.style.display = 'flex';
+    refreshTitleSelectors();
+    renderMetaPanel();
     titleModal.focus();
 }
 
@@ -307,16 +743,29 @@ function showResult(win) {
     levelModal.style.display = 'none';
     endTitleEl.innerText = win ? 'STAGE CLEAR!' : 'GAME OVER';
     endTitleEl.style.color = win ? '#ffeb3b' : '#ff5252';
-    endSubtitleEl.innerText = win ? '최종 보스를 처치했습니다' : '밤의 군세에 쓰러졌습니다';
+    endSubtitleEl.innerText = win
+        ? `${gameMode.label} 모드에서 최종 보스를 처치했습니다`
+        : `${gameMode.label} 모드에서 밤의 군세에 쓰러졌습니다`;
     resultTimeEl.innerText = formatTime(gameTime);
     resultKillsEl.innerText = String(score);
     resultLevelEl.innerText = String(player.level);
     resultWeaponsEl.innerText = String(countUnlockedWeapons());
+    runGold = Math.floor((score * 1.8 + gameTime * 0.4 + (win ? 120 : 0)) * getGoldFactor());
+    metaState.gold += runGold;
+    metaState.totalKills += totalRunKills;
+    metaState.bestTime = Math.max(metaState.bestTime, gameTime);
+    tryUnlockProgression();
+    saveMetaState();
+    renderMetaPanel(`원정 보상: +${runGold} 골드`);
     gameOverModal.style.display = 'flex';
     gameOverModal.focus();
 }
 
 function startGameSession() {
+    const selected = modeSelectEl && GAME_MODES[modeSelectEl.value] ? modeSelectEl.value : 'normal';
+    gameMode = GAME_MODES[selected];
+    if (characterSelectEl && isCharacterUnlocked(characterSelectEl.value)) selectedCharacterId = characterSelectEl.value;
+    if (stageSelectEl && isStageUnlocked(stageSelectEl.value)) selectedStageId = stageSelectEl.value;
     resetGameState();
     resizeCanvasForDevice();
     gameStarted = true;
@@ -474,6 +923,24 @@ backTitleBtn.addEventListener('click', () => {
     resetGameState();
     openTitle();
 });
+if (characterSelectEl) {
+    characterSelectEl.addEventListener('change', () => {
+        if (isCharacterUnlocked(characterSelectEl.value)) selectedCharacterId = characterSelectEl.value;
+        renderMetaPanel(getCharacterById(selectedCharacterId).desc);
+    });
+}
+if (stageSelectEl) {
+    stageSelectEl.addEventListener('change', () => {
+        if (isStageUnlocked(stageSelectEl.value)) selectedStageId = stageSelectEl.value;
+        renderMetaPanel(getStageById(selectedStageId).desc);
+    });
+}
+if (secretSubmitBtn) {
+    secretSubmitBtn.addEventListener('click', () => {
+        applySecretCode(secretInputEl ? secretInputEl.value : '');
+        if (secretInputEl) secretInputEl.value = '';
+    });
+}
 
 window.addEventListener('keydown', e => {
     const key = e.key.toLowerCase();
@@ -489,9 +956,23 @@ window.addEventListener('keydown', e => {
     }
     const moveKeys = ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'];
     if (moveKeys.includes(key)) e.preventDefault();
-    if (isPaused && levelChoices.length > 0 && ['1', '2', '3'].includes(key)) {
+    if (isPaused && ['1', '2', '3'].includes(key)) {
         const idx = Number(key) - 1;
-        if (levelChoices[idx]) applySkill(levelChoices[idx].id);
+        if (pendingArcanaChoices && pendingArcanaChoices[idx]) {
+            selectedArcanas.push(pendingArcanaChoices[idx].id);
+            pendingArcanaChoices = null;
+            levelModal.style.display = 'none';
+            isPaused = false;
+            lastFrameTime = performance.now();
+        } else if (pendingEvolutionChoices && pendingEvolutionChoices[idx]) {
+            applyEvolution(pendingEvolutionChoices[idx].id);
+            pendingEvolutionChoices = null;
+            levelModal.style.display = 'none';
+            isPaused = false;
+            lastFrameTime = performance.now();
+        } else if (levelChoices[idx]) {
+            applySkill(levelChoices[idx].id);
+        }
     }
     if (key === 'arrowup' || key === 'w') keys.up = true;
     if (key === 'arrowdown' || key === 's') keys.down = true;
@@ -520,12 +1001,13 @@ function spawnEnemy() {
         else if (side === 2) { x = camera.x + Math.random() * canvas.width; y = camera.y + canvas.height + margin; }
         else { x = camera.x - margin; y = camera.y + Math.random() * canvas.height; }
         
-        let hp = 10 + (gameTime * 0.5);
-        let speed = 2 + (gameTime * 0.02);
+        const stage = getStageById(selectedStageId);
+        let hp = (10 + (gameTime * 0.5)) * gameMode.enemyHpMul * (stage.danger || 1);
+        let speed = (2 + (gameTime * 0.02)) * gameMode.enemySpeedMul * (1 + ((stage.danger || 1) - 1) * 0.35);
         let enemyType = 'skull';
         let color = '#ff5252';
         const roll = Math.random();
-        if (gameTime > 45 && roll < 0.22) {
+        if ((gameTime > 45 && roll < 0.22) || (selectedStageId === 'catacomb' && roll < 0.33)) {
             enemyType = 'demon';
             hp *= 1.8;
             speed *= 0.9;
@@ -538,29 +1020,48 @@ function spawnEnemy() {
         }
         
         if (gameTime > 30 && !bossSpawned.mid) {
-            enemies.push(pullEnemy({ x, y, size: 60, hp: 1000, maxHp: 1000, speed: 2.5, color: '#ff00ff', isBoss: true, enemyType: 'boss_mid' }));
+            const midHp = 1000 * gameMode.enemyHpMul;
+            const midSpeed = 2.5 * gameMode.enemySpeedMul;
+            enemies.push(pullEnemy({ x, y, size: 60, hp: midHp, maxHp: midHp, speed: midSpeed, color: '#ff00ff', isBoss: true, enemyType: 'boss_mid' }));
             bossSpawned.mid = true;
-        } else if (gameTime > 60 && !bossSpawned.final) {
-            enemies.push(pullEnemy({ x, y, size: 100, hp: 5000, maxHp: 5000, speed: 1.5, color: '#ff0000', isBoss: true, enemyType: 'boss_final' }));
+        } else if (gameTime > 60 && !bossSpawned.final && gameMode.key !== 'adventure') {
+            const finalHp = 5000 * gameMode.enemyHpMul;
+            const finalSpeed = 1.5 * gameMode.enemySpeedMul;
+            enemies.push(pullEnemy({ x, y, size: 100, hp: finalHp, maxHp: finalHp, speed: finalSpeed, color: '#ff0000', isBoss: true, enemyType: 'boss_final' }));
+            bossSpawned.final = true;
+        } else if (gameMode.key === 'adventure' && gameTime > adventureClearTime - 20 && !bossSpawned.final) {
+            const finalHp = 3800 * gameMode.enemyHpMul;
+            const finalSpeed = 1.8 * gameMode.enemySpeedMul;
+            enemies.push(pullEnemy({ x, y, size: 92, hp: finalHp, maxHp: finalHp, speed: finalSpeed, color: '#ff3b3b', isBoss: true, enemyType: 'boss_final' }));
             bossSpawned.final = true;
         } else {
             enemies.push(pullEnemy({ x, y, size: 20, hp, maxHp: hp, speed, color, isBoss: false, enemyType }));
         }
     }
     
-    let spawnRate = Math.max(150, 1000 - gameTime * 15);
+    let spawnRate = Math.max(130, (1000 - gameTime * 15) / gameMode.enemySpawnMul);
     setTimeout(spawnEnemy, spawnRate); 
 }
 
 function spawnSwarm() {
+    if (selectedStageId === 'library') {
+        for (let i = 0; i < 36; i++) {
+            const x = player.x - 900 + i * 50;
+            const y = player.y - 680;
+            const hp = (6 + gameTime * 0.35) * gameMode.enemyHpMul;
+            const speed = (2.7 + gameTime * 0.02) * gameMode.enemySpeedMul;
+            enemies.push(pullEnemy({ x, y, size: 15, hp, maxHp: hp, speed, color: '#a98cff', isBoss: false, enemyType: 'bat' }));
+        }
+        return;
+    }
     for (let i = 0; i < 30; i++) {
         let angle = (Math.PI * 2 / 30) * i;
         let r = 900; 
         let x = player.x + Math.cos(angle) * r;
         let y = player.y + Math.sin(angle) * r;
         
-        let hp = 5 + (gameTime * 0.3); 
-        let speed = 2.5 + (gameTime * 0.02);
+        let hp = (5 + (gameTime * 0.3)) * gameMode.enemyHpMul;
+        let speed = (2.5 + (gameTime * 0.02)) * gameMode.enemySpeedMul;
         enemies.push(pullEnemy({ x, y, size: 15, hp, maxHp: hp, speed, color: '#ffaa00', isBoss: false, enemyType: 'bat' }));
     }
 }
@@ -569,7 +1070,7 @@ function spawnSwarm() {
 function spawnItem(x, y, forcedType = null) {
     let type = forcedType;
     if (!type) {
-        const luck = getLuckFactor();
+        const luck = getLuckFactor() * (hasArcana('greed_sigil') ? 1.2 : 1);
         let rand = Math.random();
         if (rand < 0.02 * luck) type = 'potion';                // 체력 회복
         else if (rand < (0.02 + 0.01) * luck) type = 'magnet';  // 자석
@@ -580,6 +1081,7 @@ function spawnItem(x, y, forcedType = null) {
 
 // 시간대별 경험치 보석 데이터 생성 함수
 function getGemData() {
+    if (gameMode.key === 'hyper' && gameTime > 20) return { color: '#ff8f52', value: 7, size: 8 };
     if (gameTime > 60) return { color: '#ff5252', value: 15, size: 8 }; // 60초 이후: 빨간색 (15 XP)
     if (gameTime > 30) return { color: '#4afa4a', value: 5, size: 7 };  // 30초 이후: 초록색 (5 XP)
     return { color: '#4af', value: 1, size: 6 };                        // 기본: 파란색 (1 XP)
@@ -587,7 +1089,7 @@ function getGemData() {
 
 // 경험치 획득 함수 (증가량 인자 추가)
 function gainXp(amount) {
-    player.xp += amount;
+    player.xp += amount * gameMode.xpMul;
     while (player.xp >= player.nextXp) {
         player.xp -= player.nextXp;
         player.level++;
@@ -603,12 +1105,22 @@ function triggerLevelUpUI() {
     isPaused = true;
     levelUpQueue--;
     levelEl.innerText = player.level;
+    if (player.level > 1 && player.level % 5 === 0) {
+        triggerArcanaUI();
+        return;
+    }
     
     let available = skillDB.filter(s => {
         if (s.id === 'heal') return true;
         if (s.level !== undefined) return s.level < s.maxLevel;
         return weapons[s.id].level < s.maxLevel;
     });
+    if (available.length === 0) {
+        applyLimitBreakBonus();
+        isPaused = false;
+        lastFrameTime = performance.now();
+        return;
+    }
     
     levelChoices = available.sort(() => 0.5 - Math.random()).slice(0, 3);
     
@@ -626,6 +1138,7 @@ function triggerLevelUpUI() {
         btn.addEventListener('click', () => applySkill(skill.id));
         skillsContainer.appendChild(btn);
     });
+    document.getElementById('level-up-title').innerText = '레벨 업!';
     levelModal.style.display = 'flex';
     levelModal.focus();
     const firstButton = skillsContainer.querySelector('.skill-btn');
@@ -648,6 +1161,8 @@ function applySkill(id) {
     if (id === 'cdr') { let s = skillDB.find(x=>x.id==='cdr'); s.level++; }
     if (id === 'magnetplus') { let s = skillDB.find(x=>x.id==='magnetplus'); s.level++; }
     if (id === 'heal') { player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5); updateHpBar(); }
+    if (weapons[id]) markCollection('weapons', id);
+    if (!weapons[id] && id !== 'heal') markCollection('passives', id);
     
     levelModal.style.display = 'none';
     isPaused = false;
@@ -683,6 +1198,14 @@ function updateGame(timestamp) {
         let mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
         let secs = Math.floor(gameTime % 60).toString().padStart(2, '0');
         timerEl.innerText = `${mins}:${secs}`;
+        if (gameTime >= nextRandomEventAt) {
+            applyRandomEvent();
+            nextRandomEventAt += 30;
+        }
+        if (gameMode.key === 'adventure' && gameTime >= adventureClearTime) {
+            gameWin();
+            return;
+        }
 
         [20, 45, 75].forEach(t => {
             if (gameTime >= t && !swarmsTriggered.includes(t)) {
@@ -740,9 +1263,11 @@ function updateGame(timestamp) {
                 }
                 if (closest && closestDistSq < 1200 * 1200) {
                     let baseAng = Math.atan2(closest.y - player.y, closest.x - player.x);
-                    for(let i=0; i<weapons.wand.count; i++) {
-                        let offset = (i - (weapons.wand.count-1)/2) * 0.2;
-                        bullets.push(pullBullet({ x: player.x, y: player.y, vx: Math.cos(baseAng+offset)*15, vy: Math.sin(baseAng+offset)*15, damage: weapons.wand.damage }));
+                    const boltCount = weapons.wand.count + getProjectileBonus();
+                    for(let i=0; i<boltCount; i++) {
+                        let offset = (i - (boltCount - 1) / 2) * 0.2;
+                        const bonusDamage = weapons.wand.evolved ? 1.25 : 1;
+                        bullets.push(pullBullet({ x: player.x, y: player.y, vx: Math.cos(baseAng+offset)*15, vy: Math.sin(baseAng+offset)*15, damage: weapons.wand.damage * bonusDamage }));
                     }
                     weapons.wand.lastFire = timestamp;
                 }
@@ -814,7 +1339,14 @@ function updateGame(timestamp) {
         if (weapons.lightning.level > 0 && timestamp - weapons.lightning.lastFire > weapons.lightning.cooldown * cooldownScale) {
             const targets = enemies.slice().sort((a, b) => distSq(a.x, a.y, player.x, player.y) - distSq(b.x, b.y, player.x, player.y)).slice(0, weapons.lightning.count);
             targets.forEach(t => {
-                applyDamageToEnemy(t, weapons.lightning.damage, '#d6ebff', timestamp);
+                const dmg = weapons.lightning.damage * (hasArcana('storm_oath') ? 1.3 : 1);
+                applyDamageToEnemy(t, dmg, '#d6ebff', timestamp);
+                if (weapons.lightning.evolved) {
+                    const nearest = enemies
+                        .filter(x => x !== t)
+                        .sort((a, b) => distSq(a.x, a.y, t.x, t.y) - distSq(b.x, b.y, t.x, t.y))[0];
+                    if (nearest) applyDamageToEnemy(nearest, dmg * 0.75, '#c8e8ff', timestamp);
+                }
                 lightningEffects.push({ x: t.x, y: t.y, life: 0.16, maxLife: 0.16 });
             });
             weapons.lightning.lastFire = timestamp;
@@ -840,9 +1372,18 @@ function updateGame(timestamp) {
         if (weapons.frost.level > 0 && timestamp - weapons.frost.lastFire > weapons.frost.cooldown * cooldownScale) {
             const targets = enemies.slice().sort((a, b) => distSq(a.x, a.y, player.x, player.y) - distSq(b.x, b.y, player.x, player.y)).slice(0, weapons.frost.count);
             targets.forEach(t => {
-                applyDamageToEnemy(t, weapons.frost.damage, '#bfe8ff', timestamp);
-                t.slowUntil = Math.max(t.slowUntil || 0, gameTime + weapons.frost.slowDuration);
-                t.slowFactor = Math.max(t.slowFactor || 0, weapons.frost.slow);
+                const frostDmg = weapons.frost.damage * (1 + getFrostBonus());
+                applyDamageToEnemy(t, frostDmg, '#bfe8ff', timestamp);
+                t.slowUntil = Math.max(t.slowUntil || 0, gameTime + weapons.frost.slowDuration + getFrostBonus());
+                t.slowFactor = Math.max(t.slowFactor || 0, weapons.frost.slow + getFrostBonus());
+                if (weapons.frost.evolved) {
+                    enemies.forEach(e => {
+                        if (distSq(e.x, e.y, t.x, t.y) < 120 * 120) {
+                            e.slowUntil = Math.max(e.slowUntil || 0, gameTime + 1.5);
+                            e.slowFactor = Math.max(e.slowFactor || 0, 0.35);
+                        }
+                    });
+                }
             });
             weapons.frost.lastFire = timestamp;
         }
@@ -903,7 +1444,13 @@ function updateGame(timestamp) {
                 } else if (items[i].type === 'magnet') {
                     gems.forEach(g => g.isMagnetic = true);
                 } else if (items[i].type === 'levelup') {
-                    levelUpQueue++; // 상자를 먹으면 즉시 레벨업 대기열 추가
+                    if (!triggerEvolutionUI()) {
+                        levelUpQueue++; // 상자를 먹으면 즉시 레벨업 대기열 추가
+                    } else {
+                        items.splice(i, 1);
+                        requestAnimationFrame(updateGame);
+                        return;
+                    }
                 }
                 items.splice(i, 1);
             }
@@ -942,7 +1489,7 @@ function updateGame(timestamp) {
             }
 
             if (en.hp <= 0) {
-                if (en.isBoss && bossSpawned.final && en.size === 100) { gameWin(); return; }
+                if (en.isBoss && bossSpawned.final && en.size === 100 && gameMode.key !== 'endless') { gameWin(); return; }
                 
                 let gData = getGemData(); // 현재 시간대에 맞는 보석 등급 가져오기
                 
@@ -956,6 +1503,9 @@ function updateGame(timestamp) {
                 }
                 
                 applyLifestealOnKill();
+                totalRunKills++;
+                metaState.bestiary[en.enemyType] = (metaState.bestiary[en.enemyType] || 0) + 1;
+                markCollection('enemies', en.enemyType);
                 releaseEnemy(i);
                 score++; scoreEl.innerText = score;
                 continue;
@@ -970,7 +1520,7 @@ function updateGame(timestamp) {
             const enemyHitRange = player.size + en.size;
             if (distSq(en.x, en.y, player.x, player.y) < enemyHitRange * enemyHitRange) {
                 const incoming = dt60;
-                player.hp -= incoming;
+                player.hp -= incoming * (1 - getDamageReduction());
                 playerDamageAccumulator += incoming;
                 if (timestamp - playerLastDamageTextAt > 180) {
                     spawnDamageText(player.x + (Math.random() * 10 - 5), player.y - player.size - 10, Math.max(1, Math.round(playerDamageAccumulator)), '#ff9aa7');
@@ -1004,6 +1554,9 @@ function tileNoise(ix, iy, salt = 0) {
 
 function drawCastleFloor() {
     const tile = 116;
+    const stageId = selectedStageId;
+    const baseShift = stageId === 'library' ? 8 : stageId === 'catacomb' ? -10 : 0;
+    const mossAlpha = stageId === 'catacomb' ? 0.28 : 0.15;
     const minX = Math.floor((camera.x - tile) / tile);
     const minY = Math.floor((camera.y - tile) / tile);
     const maxX = Math.ceil((camera.x + canvas.width + tile) / tile);
@@ -1015,7 +1568,7 @@ function drawCastleFloor() {
             const y = gy * tile;
             const n = tileNoise(gx, gy);
             const even = (gx + gy) % 2 === 0;
-            const shade = even ? 42 : 47;
+            const shade = (even ? 42 : 47) + baseShift;
             const tint = Math.floor(n * 12);
             ctx.fillStyle = `rgb(${shade + tint}, ${shade + tint}, ${shade + tint + 3})`;
             ctx.fillRect(x, y, tile, tile);
@@ -1036,7 +1589,7 @@ function drawCastleFloor() {
 
             if (n < 0.16) {
                 const moss = Math.floor(70 + tileNoise(gx, gy, 12) * 45);
-                ctx.fillStyle = `rgba(40, ${moss}, 50, 0.15)`;
+                ctx.fillStyle = `rgba(40, ${moss}, 50, ${mossAlpha})`;
                 ctx.fillRect(x + tile * 0.15, y + tile * 0.15, tile * 0.42, tile * 0.28);
             }
         }
@@ -1467,7 +2020,26 @@ function draw() {
     vignette.addColorStop(1, 'rgba(0,0,0,0.35)');
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = 'rgba(225, 236, 255, 0.88)';
+    ctx.font = 'bold 14px Pretendard, sans-serif';
+    ctx.textAlign = 'left';
+    const arcanaText = selectedArcanas.length > 0
+        ? `Arcana: ${selectedArcanas.map(id => ARCANA_DB.find(a => a.id === id)?.name.split('. ')[1] || id).join(', ')}`
+        : 'Arcana: 없음';
+    ctx.fillText(arcanaText, 14, canvas.height - 18);
 }
 
+if (secretInputEl) {
+    secretInputEl.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applySecretCode(secretInputEl.value);
+            secretInputEl.value = '';
+        }
+    });
+}
+refreshTitleSelectors();
+renderMetaPanel();
 openTitle();
 requestAnimationFrame(updateGame);
